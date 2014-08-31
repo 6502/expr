@@ -21,8 +21,8 @@ variables.  Referencing undefined variables is a parse time error.
 
 To evaluate the expression with current variable values just call `e.eval()`.
 
->>> Warning <<<
----------------
+Warning
+-------
 For efficiency reasons the variables are stored in parsed expressions
 as `double *`. This is fine for `std::map<std::string, double>`
 because the address of an item inside a map is guaranteed to never
