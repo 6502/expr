@@ -49,6 +49,11 @@ double Expr::eval() const {
         case NE:  wrk[code[i+1]] = (wrk[code[i+1]] != wrk[code[i+2]]); i+=2; break;
         case AND: wrk[code[i+1]] = (wrk[code[i+1]] && wrk[code[i+2]]); i+=2; break;
         case OR:  wrk[code[i+1]] = (wrk[code[i+1]] || wrk[code[i+2]]); i+=2; break;
+        case B_OR: wrk[code[i+1]] = (int(wrk[code[i+1]]) | int(wrk[code[i+2]])); i+=2; break;
+        case B_AND: wrk[code[i+1]] = (int(wrk[code[i+1]]) & int(wrk[code[i+2]])); i+=2; break;
+        case B_XOR: wrk[code[i+1]] = (int(wrk[code[i+1]]) ^ int(wrk[code[i+2]])); i+=2; break;
+        case B_SHL: wrk[code[i+1]] = (int(wrk[code[i+1]]) << int(wrk[code[i+2]])); i+=2; break;
+        case B_SHR: wrk[code[i+1]] = (int(wrk[code[i+1]]) >> int(wrk[code[i+2]])); i+=2; break;
         case FUNC0: wrk[code[i+2]] = func0[code[i+1]](); i+=2; break;
         case FUNC1: wrk[code[i+2]] = func1[code[i+1]](wrk[code[i+2]]); i+=2; break;
         case FUNC2: wrk[code[i+2]] = func2[code[i+1]](wrk[code[i+2]], wrk[code[i+3]]); i+=3; break;
@@ -63,7 +68,7 @@ Expr Expr::partialParse(const char *& s, std::map<std::string, double>& vars) {
     result.wrk.resize(1);
     const char *s0 = s;
     try {
-        result.compile(0, regs, s, vars, 5);
+        result.compile(0, regs, s, vars, -1);
         skipsp(s);
     } catch (const Error& re) {
         std::string msg(re.what());
@@ -81,16 +86,12 @@ Expr Expr::partialParse(const char *& s, std::map<std::string, double>& vars) {
 
 void Expr::compile(int target, std::vector<int>& regs,
                    const char *& s, std::map<std::string, double>& vars, int level) {
-    const Operator ops[] = {{"*", 1, MUL}, {"/", 1, DIV},
-                            {"+", 2, ADD}, {"-", 2, SUB},
-                            {"<", 3, LT}, {">", 3, GT}, {"<=", 3, LE}, {">=", 3, GE}, {"==", 3, EQ}, {"!=", 3, NE},
-                            {"&&", 4, AND},
-                            {"||", 5, OR}};
+    if (level == -1) level = max_level;
     if (level == 0) {
         skipsp(s);
         if (*s == '(') {
             s++;
-            compile(target, regs, s, vars, 5);
+            compile(target, regs, s, vars, -1);
             skipsp(s);
             if (*s != ')') throw Error("')' expected");
             s++;
@@ -120,7 +121,7 @@ void Expr::compile(int target, std::vector<int>& regs,
                 int arity = it->second.second;
                 for (int a=0; a<arity; a++) {
                     args.push_back(a == 0 ? target : reg(regs));
-                    compile(args.back(), regs, s, vars, 5);
+                    compile(args.back(), regs, s, vars, -1);
                     if (a != arity-1) {
                         skipsp(s);
                         if (*s != ',') throw Error("',' expected");
@@ -154,15 +155,13 @@ void Expr::compile(int target, std::vector<int>& regs,
     } else {
         compile(target, regs, s, vars, level-1);
         while (skipsp(s), *s) {
-            int i = sizeof(ops)/sizeof(ops[0]) - 1;
-            while (i >= 0 &&
-                   (ops[i].level != level ||
-                    strncmp(s, ops[i].name, strlen(ops[i].name)) != 0)) --i;
-            if (i == -1) break;
-            s += strlen(ops[i].name);
+            std::map<std::string, Operator>::iterator it = operators.find(std::string(s, s+2));
+            if (it == operators.end()) it = operators.find(std::string(s, s+1));
+            if (it == operators.end() || it->second.level != level) break;
+            s += it->first.size();
             int x = reg(regs);
             compile(x, regs, s, vars, level-1);
-            code.push_back(ops[i].opcode);
+            code.push_back(it->second.opcode);
             code.push_back(target);
             code.push_back(x);
             regs.push_back(x);
@@ -174,6 +173,7 @@ std::string Expr::disassemble() const {
     const char *opnames[] = { "CONSTANT", "VARIABLE",
                               "NEG",
                               "ADD", "SUB", "MUL", "DIV", "LT", "LE", "GT", "GE", "EQ", "NE", "AND", "OR",
+                              "B_SHL", "B_SHR", "B_AND", "B_OR", "B_XOR",
                               "FUNC0", "FUNC1", "FUNC2" };
     std::string result;
     char buf[30];
@@ -227,24 +227,46 @@ std::string Expr::disassemble() const {
     return result;
 }
 
-namespace {
-    struct init {
-        static double random() {
-            return double(rand()) / RAND_MAX;
+int Expr::max_level;
+std::map<std::string, Expr::Operator> Expr::operators;
+
+class Expr::Init {
+    static double random() {
+        return double(rand()) / RAND_MAX;
+    }
+
+public:
+    Init() {
+        const Expr::Operator ops[] =
+            {{"*", 1, MUL}, {"/", 1, DIV},
+             {"+", 2, ADD}, {"-", 2, SUB},
+
+             {"<<", 3, B_SHL}, {">>", 3, B_SHR},
+             {"&", 4, B_AND},
+             {"|", 5, B_OR}, {"^", 5, B_XOR},
+
+             {"<", 6, LT}, {">", 6, GT}, {"<=", 6, LE}, {">=", 6, GE}, {"==", 6, EQ}, {"!=", 6, NE},
+
+             {"&&", 7, AND},
+
+             {"||", 8, OR}};
+        int n = sizeof(ops) / sizeof(ops[0]);
+        for (int i=0; i<n; i++) {
+            Expr::operators[ops[i].name] = ops[i];
         }
+        Expr::max_level = ops[n-1].level;
 
-        init() {
-            Expr::addFunction("random", random);
+        Expr::addFunction("random", random);
 
-            Expr::addFunction("abs", fabs);
-            Expr::addFunction("sqrt", sqrt);
-            Expr::addFunction("sin", sin);
-            Expr::addFunction("cos", cos);
-            Expr::addFunction("tan", tan);
-            Expr::addFunction("atan", atan);
+        Expr::addFunction("floor", floor);
+        Expr::addFunction("abs", fabs);
+        Expr::addFunction("sqrt", sqrt);
+        Expr::addFunction("sin", sin);
+        Expr::addFunction("cos", cos);
+        Expr::addFunction("tan", tan);
+        Expr::addFunction("atan", atan);
 
-            Expr::addFunction("atan2", atan2);
-            Expr::addFunction("pow", pow);
-        }
-    } init_instance;
-}
+        Expr::addFunction("atan2", atan2);
+        Expr::addFunction("pow", pow);
+    }
+} init_instance;

@@ -100,16 +100,29 @@ private:
     enum { CONSTANT, VARIABLE,
            NEG,
            ADD, SUB, MUL, DIV, LT, LE, GT, GE, EQ, NE, AND, OR,
+           B_SHL, B_SHR, B_AND, B_OR, B_XOR,
            FUNC0, FUNC1, FUNC2 };
+
+    struct Operator {
+        const char *name;
+        int level;
+        int opcode;
+    };
 
     std::vector<int> code;
     mutable std::vector<double> wrk;
     std::vector<double *> variables;
 
+    static std::map<std::string, Operator> operators;
+    static int max_level;
+
     static std::map<std::string, std::pair<int, int> > functions;
     static std::vector<double (*)()> func0;
     static std::vector<double (*)(double)> func1;
     static std::vector<double (*)(double,double)> func2;
+
+    class Init;
+    friend class Init;
 
     int reg(std::vector<int>& regs) {
         if (regs.size() == 0) {
@@ -120,12 +133,6 @@ private:
         regs.pop_back();
         return r;
     }
-
-    struct Operator {
-        const char *name;
-        int level;
-        int opcode;
-    };
 
     void compile(int target, std::vector<int>& regs,
                  const char *& s, std::map<std::string, double>& vars, int level);

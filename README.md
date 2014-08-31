@@ -54,23 +54,31 @@ Functions
 ---------
 Using `Expr::addFunction(name, f)` it's possible to add external
 functions of 0, 1 or 2 parameters. Predefined functions from
-`<math.h>` are: **fabs**, **sqrt**, **sin**, **cos**, **tan**,
-**atan**, **atan2**, **pow** and there is also **random** taking
-no parameters and returning a number between 0 and 1 implemented
-as `double(rand()) / RAND_MAX`.
+`<math.h>` are: **floor**, **fabs**, **sqrt**, **sin**, **cos**,
+**tan**, **atan**, **atan2**, **pow** and there is also **random**
+taking no parameters and returning a number between 0 and 1
+implemented as `double(rand()) / RAND_MAX`.
 
 Syntax
 ------
-Normal C syntax is used; implemented operators (in order of precedence) are:
+C syntax is used; implemented operators (in order of precedence) are:
 
-    - (unary)
-    * /
-    + -
-    < <= > >= == !=
-    &&
-    ||
+    - (unary)          (sign change)
+    * /                (multiplication/division)
+    + -                (addition/subtraction)
 
-variables are parsed with `[a-zA-Z][a-zA-Z0-9_]*`.
+    << >>              (left and right shift)
+    &                  (bitwise and)
+    | ^                (bitwise or and xor)
+
+    < <= > >= == !=    (comparison, result is 0 or 1)
+    &&                 (logical and)
+    ||                 (logical or)
+
+**NOTE**: precedence is not the same as in C because C precendence for
+bitwise operations is just wrong.
+
+variables and function names are parsed with `[a-zA-Z_][a-zA-Z0-9_]*`.
 
 Comments can be included: characters from `;` to the end of a line
 are ignored during parsing.
