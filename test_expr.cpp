@@ -63,7 +63,7 @@ int main() {
     int i = 0;
     for (y=0; y<h; y++) {
         for (x=0; x<w; x++) {
-            img[i++] = e.eval();
+            img[i++] = e;
         }
     }
     clock_t stop = clock();
