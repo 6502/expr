@@ -1,5 +1,8 @@
 expr
 ====
+
+![test image](https://raw.github.com/6502/expr/master/images/test.jpg)
+
 Tiny library for run-time evaluation of expressions for C++.
 
 The code is just one include file and one cpp file (no dependencies
