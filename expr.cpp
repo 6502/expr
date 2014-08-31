@@ -32,34 +32,36 @@ std::vector<double (*)(double)> Expr::func1;
 std::vector<double (*)(double,double)> Expr::func2;
 
 double Expr::eval() const {
-    for (int i=0,n=code.size(); i<n; i++) {
-        switch(code[i]) {
-        case CONSTANT: wrk[code[i+1]] = wrk[code[i+2]]; i+=2; break;
-        case VARIABLE: wrk[code[i+1]] = *variables[code[i+2]]; i+=2; break;
-        case NEG: wrk[code[i+1]] = -wrk[code[i+1]]; i+=1; break;
-        case ADD: wrk[code[i+1]] += wrk[code[i+2]]; i+=2; break;
-        case SUB: wrk[code[i+1]] -= wrk[code[i+2]]; i+=2; break;
-        case MUL: wrk[code[i+1]] *= wrk[code[i+2]]; i+=2; break;
-        case DIV: wrk[code[i+1]] /= wrk[code[i+2]]; i+=2; break;
-        case LT:  wrk[code[i+1]] = (wrk[code[i+1]] <  wrk[code[i+2]]); i+=2; break;
-        case LE:  wrk[code[i+1]] = (wrk[code[i+1]] <= wrk[code[i+2]]); i+=2; break;
-        case GT:  wrk[code[i+1]] = (wrk[code[i+1]] >  wrk[code[i+2]]); i+=2; break;
-        case GE:  wrk[code[i+1]] = (wrk[code[i+1]] >= wrk[code[i+2]]); i+=2; break;
-        case EQ:  wrk[code[i+1]] = (wrk[code[i+1]] == wrk[code[i+2]]); i+=2; break;
-        case NE:  wrk[code[i+1]] = (wrk[code[i+1]] != wrk[code[i+2]]); i+=2; break;
-        case AND: wrk[code[i+1]] = (wrk[code[i+1]] && wrk[code[i+2]]); i+=2; break;
-        case OR:  wrk[code[i+1]] = (wrk[code[i+1]] || wrk[code[i+2]]); i+=2; break;
-        case B_OR: wrk[code[i+1]] = (int(wrk[code[i+1]]) | int(wrk[code[i+2]])); i+=2; break;
-        case B_AND: wrk[code[i+1]] = (int(wrk[code[i+1]]) & int(wrk[code[i+2]])); i+=2; break;
-        case B_XOR: wrk[code[i+1]] = (int(wrk[code[i+1]]) ^ int(wrk[code[i+2]])); i+=2; break;
-        case B_SHL: wrk[code[i+1]] = (int(wrk[code[i+1]]) << int(wrk[code[i+2]])); i+=2; break;
-        case B_SHR: wrk[code[i+1]] = (int(wrk[code[i+1]]) >> int(wrk[code[i+2]])); i+=2; break;
-        case FUNC0: wrk[code[i+2]] = func0[code[i+1]](); i+=2; break;
-        case FUNC1: wrk[code[i+2]] = func1[code[i+1]](wrk[code[i+2]]); i+=2; break;
-        case FUNC2: wrk[code[i+2]] = func2[code[i+1]](wrk[code[i+2]], wrk[code[i+3]]); i+=3; break;
+    double *wp = &wrk[0];
+    const int *cp = &code[0], *ce = cp+code.size();
+    while (cp != ce) {
+        switch(cp[0]) {
+        case CONSTANT: wp[cp[1]] = wp[cp[2]]; cp+=3; break;
+        case VARIABLE: wp[cp[1]] = *variables[cp[2]]; cp+=3; break;
+        case NEG: wp[cp[1]] = -wp[cp[1]]; cp+=2; break;
+        case ADD: wp[cp[1]] += wp[cp[2]]; cp+=3; break;
+        case SUB: wp[cp[1]] -= wp[cp[2]]; cp+=3; break;
+        case MUL: wp[cp[1]] *= wp[cp[2]]; cp+=3; break;
+        case DIV: wp[cp[1]] /= wp[cp[2]]; cp+=3; break;
+        case LT:  wp[cp[1]] = (wp[cp[1]] <  wp[cp[2]]); cp+=3; break;
+        case LE:  wp[cp[1]] = (wp[cp[1]] <= wp[cp[2]]); cp+=3; break;
+        case GT:  wp[cp[1]] = (wp[cp[1]] >  wp[cp[2]]); cp+=3; break;
+        case GE:  wp[cp[1]] = (wp[cp[1]] >= wp[cp[2]]); cp+=3; break;
+        case EQ:  wp[cp[1]] = (wp[cp[1]] == wp[cp[2]]); cp+=3; break;
+        case NE:  wp[cp[1]] = (wp[cp[1]] != wp[cp[2]]); cp+=3; break;
+        case AND: wp[cp[1]] = (wp[cp[1]] && wp[cp[2]]); cp+=3; break;
+        case OR:  wp[cp[1]] = (wp[cp[1]] || wp[cp[2]]); cp+=3; break;
+        case B_OR: wp[cp[1]] = (int(wp[cp[1]]) | int(wp[cp[2]])); cp+=3; break;
+        case B_AND: wp[cp[1]] = (int(wp[cp[1]]) & int(wp[cp[2]])); cp+=3; break;
+        case B_XOR: wp[cp[1]] = (int(wp[cp[1]]) ^ int(wp[cp[2]])); cp+=3; break;
+        case B_SHL: wp[cp[1]] = (int(wp[cp[1]]) << int(wp[cp[2]])); cp+=3; break;
+        case B_SHR: wp[cp[1]] = (int(wp[cp[1]]) >> int(wp[cp[2]])); cp+=3; break;
+        case FUNC0: wp[cp[2]] = func0[cp[1]](); cp+=3; break;
+        case FUNC1: wp[cp[2]] = func1[cp[1]](wp[cp[2]]); cp+=3; break;
+        case FUNC2: wp[cp[2]] = func2[cp[1]](wp[cp[2]], wp[cp[3]]); cp+=4; break;
         }
     }
-    return wrk[0];
+    return wp[0];
 }
 
 Expr Expr::partialParse(const char *& s, std::map<std::string, double>& vars) {
