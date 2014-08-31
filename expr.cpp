@@ -36,8 +36,8 @@ double Expr::eval() const {
     const int *cp = &code[0], *ce = cp+code.size();
     while (cp != ce) {
         switch(cp[0]) {
-        case CONSTANT: wp[cp[1]] = wp[cp[2]]; cp+=3; break;
-        case VARIABLE: wp[cp[1]] = *variables[cp[2]]; cp+=3; break;
+        case MOVE: wp[cp[1]] = wp[cp[2]]; cp+=3; break;
+        case LOAD: wp[cp[1]] = *variables[cp[2]]; cp+=3; break;
         case NEG: wp[cp[1]] = -wp[cp[1]]; cp+=2; break;
         case ADD: wp[cp[1]] += wp[cp[2]]; cp+=3; break;
         case SUB: wp[cp[1]] -= wp[cp[2]]; cp+=3; break;
@@ -72,16 +72,15 @@ double Expr::eval() const {
         case FUNC2: wp[cp[2]] = func2[cp[1]](wp[cp[2]], wp[cp[3]]); cp+=4; break;
         }
     }
-    return wp[0];
+    return wp[resreg];
 }
 
 Expr Expr::partialParse(const char *& s, std::map<std::string, double>& vars) {
     Expr result;
     std::vector<int> regs;
-    result.wrk.resize(1);
     const char *s0 = s;
     try {
-        result.compile(0, regs, s, vars, -1);
+        result.resreg = result.compile(regs, s, vars, -1)&~READONLY;
         skipsp(s);
     } catch (const Error& re) {
         std::string msg(re.what());
@@ -94,33 +93,42 @@ Expr Expr::partialParse(const char *& s, std::map<std::string, double>& vars) {
         msg += "^ HERE\n";
         throw Error(msg);
     }
+    //printf("s0 = \"%s\":\n%s\n\n", s0, result.disassemble().c_str());
     return result;
 }
 
-void Expr::compile(int target, std::vector<int>& regs,
-                   const char *& s, std::map<std::string, double>& vars, int level) {
+int Expr::compile(std::vector<int>& regs,
+                  const char *& s, std::map<std::string, double>& vars, int level) {
     if (level == -1) level = max_level;
     if (level == 0) {
         skipsp(s);
         if (*s == '(') {
             s++;
-            compile(target, regs, s, vars, -1);
+            int res = compile(regs, s, vars, -1);
             skipsp(s);
             if (*s != ')') throw Error("')' expected");
             s++;
+            return res;
         } else if (isdigit((unsigned char)*s) || (*s=='-' && isdigit((unsigned char)s[1]))) {
             char *ss = 0;
             double v = strtod(s, &ss);
             if (ss && ss!=s) {
                 int x = wrk.size(); wrk.push_back(v);
-                code.push_back(CONSTANT); code.push_back(target); code.push_back(x);
                 s = (const char *)ss;
+                return x | READONLY;
             } else {
                 throw Error("Invalid number");
             }
         } else if (*s == '-') {
-            s++; compile(target, regs, s, vars, 0);
-            code.push_back(NEG); code.push_back(target);
+            s++;
+            int res = compile(regs, s, vars, 0);
+            if (res & READONLY) {
+                int r1 = reg(regs);
+                code.push_back(MOVE); code.push_back(r1); code.push_back(res&~READONLY);
+                res = r1;
+            }
+            code.push_back(NEG); code.push_back(res);
+            return res;
         } else if (*s && (*s == '_' || isalpha((unsigned char)*s))) {
             const char *s0 = s;
             while (*s && (isalpha((unsigned char)*s) || isdigit((unsigned char)*s) || *s == '_')) s++;
@@ -138,8 +146,7 @@ void Expr::compile(int target, std::vector<int>& regs,
                 int id = it->second.first;
                 int arity = it->second.second;
                 for (int a=0; a<arity; a++) {
-                    args.push_back(a == 0 ? target : reg(regs));
-                    compile(args.back(), regs, s, vars, -1);
+                    args.push_back(compile(regs, s, vars, -1));
                     if (a != arity-1) {
                         skipsp(s);
                         if (*s != ',') throw Error("',' expected");
@@ -149,6 +156,12 @@ void Expr::compile(int target, std::vector<int>& regs,
                 skipsp(s);
                 if (*s != ')') throw Error("')' expected");
                 s++;
+                int target = (arity == 0) ? reg(regs) : args[0];
+                if (target & READONLY) {
+                    int r1 = reg(regs);
+                    code.push_back(MOVE); code.push_back(r1); code.push_back(target&~READONLY);
+                    target = r1;
+                }
                 if (ii) {
                     code.push_back(id);
                 } else {
@@ -157,16 +170,21 @@ void Expr::compile(int target, std::vector<int>& regs,
                 }
                 code.push_back(target);
                 for (int i=1; i<arity; i++) {
-                    code.push_back(args[i]);
-                    regs.push_back(args[i]);
+                    code.push_back(args[i]&~READONLY);
+                    if (!(args[i] & READONLY)) {
+                        regs.push_back(args[i]);
+                    }
                 }
+                return target;
             } else {
                 std::map<std::string, double>::iterator it = vars.find(name);
                 if (it != vars.end()) {
+                    int target = reg(regs);
                     variables.push_back(&it->second);
-                    code.push_back(VARIABLE);
+                    code.push_back(LOAD);
                     code.push_back(target);
                     code.push_back(variables.size()-1);
+                    return target;
                 } else {
                     throw Error(std::string("Unknown variable '" + name + "'"));
                 }
@@ -174,25 +192,31 @@ void Expr::compile(int target, std::vector<int>& regs,
         } else {
             throw Error("Syntax error");
         }
-    } else {
-        compile(target, regs, s, vars, level-1);
-        while (skipsp(s), *s) {
-            std::map<std::string, Operator>::iterator it = operators.find(std::string(s, s+2));
-            if (it == operators.end()) it = operators.find(std::string(s, s+1));
-            if (it == operators.end() || it->second.level != level) break;
-            s += it->first.size();
-            int x = reg(regs);
-            compile(x, regs, s, vars, level-1);
-            code.push_back(it->second.opcode);
-            code.push_back(target);
-            code.push_back(x);
+    }
+    int res = compile(regs, s, vars, level-1);
+    while (skipsp(s), *s) {
+        std::map<std::string, Operator>::iterator it = operators.find(std::string(s, s+2));
+        if (it == operators.end()) it = operators.find(std::string(s, s+1));
+        if (it == operators.end() || it->second.level != level) break;
+        s += it->first.size();
+        int x = compile(regs, s, vars, level-1);
+        if (res & READONLY) {
+            int r1 = reg(regs);
+            code.push_back(MOVE); code.push_back(r1); code.push_back(res&~READONLY);
+            res = r1;
+        }
+        code.push_back(it->second.opcode);
+        code.push_back(res);
+        code.push_back(x&~READONLY);
+        if (!(x&READONLY)) {
             regs.push_back(x);
         }
     }
+    return res;
 }
 
 std::string Expr::disassemble() const {
-    const char *opnames[] = { "CONSTANT", "VARIABLE",
+    const char *opnames[] = { "MOVE", "LOAD",
                               "NEG",
                               "ADD", "SUB", "MUL", "DIV", "LT", "LE", "GT", "GE", "EQ", "NE", "AND", "OR",
                               "B_SHL", "B_SHR", "B_AND", "B_OR", "B_XOR",
@@ -207,12 +231,12 @@ std::string Expr::disassemble() const {
         result += buf;
         result += opnames[code[i]];
         switch(code[i]) {
-        case CONSTANT:
-            sprintf(buf, "(%0.3f)\n", wrk[code[i+2]]);
+        case MOVE:
+            sprintf(buf, "(%i = %i) v=%0.3f\n", code[i+1], code[i+2], wrk[code[i+2]]);
             i += 2;
             break;
-        case VARIABLE:
-            sprintf(buf, "(%p -> %0.3f)\n", variables[code[i+2]], *variables[code[i+2]]);
+        case LOAD:
+            sprintf(buf, "(%i = %p)\n", code[i+1], variables[code[i+2]]);
             i += 2;
             break;
         case NEG:

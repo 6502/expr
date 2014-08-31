@@ -29,6 +29,7 @@ SOFTWARE.
 #include <string>
 #include <map>
 #include <stdexcept>
+#include <algorithm>
 #include <stdlib.h>
 #include <string.h>
 
@@ -61,10 +62,12 @@ public:
     }
 
     Expr(double x = 0.0) {
+        resreg = 0;
         wrk.push_back(x);
     }
 
     void swap(Expr& other) {
+        std::swap(resreg, other.resreg);
         code.swap(other.code);
         wrk.swap(other.wrk);
         variables.swap(other.variables);
@@ -97,13 +100,14 @@ public:
     std::string disassemble() const;
 
 private:
-    enum { CONSTANT, VARIABLE,
+    enum { MOVE, LOAD,
            NEG,
            ADD, SUB, MUL, DIV, LT, LE, GT, GE, EQ, NE, AND, OR,
            B_SHL, B_SHR, B_AND, B_OR, B_XOR,
            FSIN, FCOS, FFLOOR, FABS, FSQRT, FTAN, FATAN, FLOG, FEXP, FATAN2, FPOW,
            FUNC0, FUNC1, FUNC2 };
 
+    int resreg;
     std::vector<int> code;
     mutable std::vector<double> wrk;
     std::vector<double *> variables;
@@ -126,6 +130,8 @@ private:
     class Init;
     friend class Init;
 
+    enum { READONLY = 0x4000000 };
+
     int reg(std::vector<int>& regs) {
         if (regs.size() == 0) {
             wrk.resize(1 + wrk.size());
@@ -136,8 +142,8 @@ private:
         return r;
     }
 
-    void compile(int target, std::vector<int>& regs,
-                 const char *& s, std::map<std::string, double>& vars, int level);
+    int compile(std::vector<int>& regs,
+                const char *& s, std::map<std::string, double>& vars, int level);
 
 };
 
