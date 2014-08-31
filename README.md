@@ -69,7 +69,7 @@ C syntax is used; implemented operators (in order of precedence) are:
 
     << >>              (left and right shift)
     &                  (bitwise and)
-    | ^                (bitwise or and xor)
+    | ^                (bitwise or / xor)
 
     < <= > >= == !=    (comparison, result is 0 or 1)
     &&                 (logical and)
