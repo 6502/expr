@@ -75,11 +75,11 @@ int main() {
     printf("%i errors on %i tests\n", errors, ntests);
 
     int w=640, h=480;
-    vars["k"] = 255.0/((w*w+h*h)/4);
+    vars["k"] = 10*3.141592654 / ((w*w+h*h)/4);
     double& y = vars["y"];
     double& x = vars["x"];
     std::vector<unsigned char> img(w*h);
-    Expr e("((x-320)*(x-320) + (y-240)*(y-240))*k + random()*32-16", vars);
+    Expr e("128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127 + random()*32-16", vars);
     printf("Expression compiled code:\n%s\n", e.disassemble().c_str());
     clock_t start = clock();
     int i = 0;
