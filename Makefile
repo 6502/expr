@@ -11,7 +11,7 @@ CCOPTS_11 = $(CCOPTS) -std=c++0x
 all: test_expr test_expr_11 test
 
 clean:
-	rm -f test_expr test_expr_11 test.pgm *.gcov *.gcda *.gcno
+	rm -f test_expr test_expr_11 test*.pgm *.gcov *.gcda *.gcno
 
 test_expr: test_expr.cpp expr.cpp expr.h
 	$(CC) $(CCOPTS) -otest_expr test_expr.cpp expr.cpp
