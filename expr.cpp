@@ -56,6 +56,17 @@ double Expr::eval() const {
         case B_XOR: wp[cp[1]] = (int(wp[cp[1]]) ^ int(wp[cp[2]])); cp+=3; break;
         case B_SHL: wp[cp[1]] = (int(wp[cp[1]]) << int(wp[cp[2]])); cp+=3; break;
         case B_SHR: wp[cp[1]] = (int(wp[cp[1]]) >> int(wp[cp[2]])); cp+=3; break;
+        case FFLOOR: wp[cp[1]] = floor(wp[cp[1]]); cp+=2; break;
+        case FABS: wp[cp[1]] = fabs(wp[cp[1]]); cp+=2; break;
+        case FSIN: wp[cp[1]] = sin(wp[cp[1]]); cp+=2; break;
+        case FCOS: wp[cp[1]] = cos(wp[cp[1]]); cp+=2; break;
+        case FSQRT: wp[cp[1]] = sqrt(wp[cp[1]]); cp+=2; break;
+        case FTAN: wp[cp[1]] = tan(wp[cp[1]]); cp+=2; break;
+        case FATAN: wp[cp[1]] = atan(wp[cp[1]]); cp+=2; break;
+        case FLOG: wp[cp[1]] = log(wp[cp[1]]); cp+=2; break;
+        case FEXP: wp[cp[1]] = exp(wp[cp[1]]); cp+=2; break;
+        case FATAN2: wp[cp[1]] = atan2(wp[cp[1]], wp[cp[2]]); cp+=3; break;
+        case FPOW: wp[cp[1]] = pow(wp[cp[1]], wp[cp[2]]); cp+=3; break;
         case FUNC0: wp[cp[2]] = func0[cp[1]](); cp+=3; break;
         case FUNC1: wp[cp[2]] = func1[cp[1]](wp[cp[2]]); cp+=3; break;
         case FUNC2: wp[cp[2]] = func2[cp[1]](wp[cp[2]], wp[cp[3]]); cp+=4; break;
@@ -115,8 +126,13 @@ void Expr::compile(int target, std::vector<int>& regs,
             while (*s && (isalpha((unsigned char)*s) || isdigit((unsigned char)*s) || *s == '_')) s++;
             std::string name(s0, s);
             if (*s == '(') {
+                bool ii = false;
                 std::map<std::string, std::pair<int, int> >::iterator it = functions.find(name);
-                if (it == functions.end()) throw Error(std::string("Unknown function '" + name + "'"));
+                if (it == functions.end()) {
+                    ii = true;
+                    it = inlined.find(name);
+                    if (it == inlined.end()) throw Error(std::string("Unknown function '" + name + "'"));
+                }
                 s++;
                 std::vector<int> args;
                 int id = it->second.first;
@@ -133,8 +149,12 @@ void Expr::compile(int target, std::vector<int>& regs,
                 skipsp(s);
                 if (*s != ')') throw Error("')' expected");
                 s++;
-                code.push_back(FUNC0 + arity);
-                code.push_back(id);
+                if (ii) {
+                    code.push_back(id);
+                } else {
+                    code.push_back(FUNC0 + arity);
+                    code.push_back(id);
+                }
                 code.push_back(target);
                 for (int i=1; i<arity; i++) {
                     code.push_back(args[i]);
@@ -176,6 +196,8 @@ std::string Expr::disassemble() const {
                               "NEG",
                               "ADD", "SUB", "MUL", "DIV", "LT", "LE", "GT", "GE", "EQ", "NE", "AND", "OR",
                               "B_SHL", "B_SHR", "B_AND", "B_OR", "B_XOR",
+                              "FSIN", "FCOS", "FFLOOR", "FABS", "FSQRT", "FTAN", "FATAN", "FLOG", "FEXP",
+                              "FATAN2", "FPOW",
                               "FUNC0", "FUNC1", "FUNC2" };
     std::string result;
     char buf[30];
@@ -186,16 +208,30 @@ std::string Expr::disassemble() const {
         result += opnames[code[i]];
         switch(code[i]) {
         case CONSTANT:
-            sprintf(buf, "(%i = %0.3f)\n", code[i+1], wrk[code[i+2]]);
+            sprintf(buf, "(%0.3f)\n", wrk[code[i+2]]);
             i += 2;
             break;
         case VARIABLE:
-            sprintf(buf, "(%i = %p -> %0.3f)\n", code[i+1], variables[code[i+2]], *variables[code[i+2]]);
+            sprintf(buf, "(%p -> %0.3f)\n", variables[code[i+2]], *variables[code[i+2]]);
             i += 2;
             break;
         case NEG:
+        case FSIN:
+        case FCOS:
+        case FFLOOR:
+        case FABS:
+        case FSQRT:
+        case FTAN:
+        case FATAN:
+        case FLOG:
+        case FEXP:
             sprintf(buf, "(%i)\n", code[i+1]);
             i += 1;
+            break;
+        case FATAN2:
+        case FPOW:
+            sprintf(buf, "(%i, %i) -> %i\n", code[i+1], code[i+2], code[i+1]);
+            i += 2;
             break;
         case FUNC0:
         case FUNC1:
@@ -229,6 +265,8 @@ std::string Expr::disassemble() const {
     return result;
 }
 
+std::map<std::string, std::pair<int, int> > Expr::inlined;
+
 int Expr::max_level;
 std::map<std::string, Expr::Operator> Expr::operators;
 
@@ -260,15 +298,16 @@ public:
 
         Expr::addFunction("random", random);
 
-        Expr::addFunction("floor", floor);
-        Expr::addFunction("abs", fabs);
-        Expr::addFunction("sqrt", sqrt);
-        Expr::addFunction("sin", sin);
-        Expr::addFunction("cos", cos);
-        Expr::addFunction("tan", tan);
-        Expr::addFunction("atan", atan);
-
-        Expr::addFunction("atan2", atan2);
-        Expr::addFunction("pow", pow);
+        Expr::inlined["floor"] = std::make_pair(Expr::FFLOOR, 1);
+        Expr::inlined["abs"] = std::make_pair(Expr::FABS, 1);
+        Expr::inlined["sqrt"] = std::make_pair(Expr::FSQRT, 1);
+        Expr::inlined["sin"] = std::make_pair(Expr::FSIN, 1);
+        Expr::inlined["cos"] = std::make_pair(Expr::FCOS, 1);
+        Expr::inlined["tan"] = std::make_pair(Expr::FTAN, 1);
+        Expr::inlined["atan"] = std::make_pair(Expr::FATAN, 1);
+        Expr::inlined["log"] = std::make_pair(Expr::FLOG, 1);
+        Expr::inlined["exp"] = std::make_pair(Expr::FEXP, 1);
+        Expr::inlined["atan2"] = std::make_pair(Expr::FATAN2, 2);
+        Expr::inlined["pow"] = std::make_pair(Expr::FPOW, 2);
     }
 } init_instance;

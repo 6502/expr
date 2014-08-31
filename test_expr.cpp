@@ -7,7 +7,18 @@ double myrandom() {
     return double(rand()) / RAND_MAX;
 }
 
+double sqr(double x) {
+    return x*x;
+}
+
+double len2(double a, double b) {
+    return sqrt(a*a + b*b);
+}
+
 int main() {
+    Expr::addFunction("sqr", sqr);
+    Expr::addFunction("len2", len2);
+
     struct Test { const char *expr; int err; double result; } tests[] = {
         {"1", -1, 1.0},
         {"1+1", -1, 2.0},
@@ -49,6 +60,14 @@ int main() {
         {"atan2(12)", 8, -1},
         {"atan2(0, 1)", -1, 0},
         {"abs(atan(1)-3.141592654/4) < 1E-6", -1, 1.0},
+        {"random() != 1.2", -1, 1.0},
+        {"abs(log(1024)/log(2) - 10) < 1E-6", -1, 1.0},
+        {"floor(pow(2, 8) + 0.5) == 256", -1, 1.0},
+        {"abs(sqrt(2)*sqrt(2) - 2) < 1E-6", -1, 1.0},
+        {"abs(tan(3.141592654/4)-1) < 1E-6", -1, 1.0},
+        {"abs(log(exp(13)) - 13) < 1E-6", -1, 1.0},
+        {"abs(len2(3,4) - 5) < 1E-6", -1, 1.0},
+        {"sqr(3) == 9", -1, 1.0},
 
         {"1+z2*4", 4, -1},
         {"1+2*", 4, -1},

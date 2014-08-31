@@ -101,7 +101,12 @@ private:
            NEG,
            ADD, SUB, MUL, DIV, LT, LE, GT, GE, EQ, NE, AND, OR,
            B_SHL, B_SHR, B_AND, B_OR, B_XOR,
+           FSIN, FCOS, FFLOOR, FABS, FSQRT, FTAN, FATAN, FLOG, FEXP, FATAN2, FPOW,
            FUNC0, FUNC1, FUNC2 };
+
+    std::vector<int> code;
+    mutable std::vector<double> wrk;
+    std::vector<double *> variables;
 
     struct Operator {
         const char *name;
@@ -109,12 +114,9 @@ private:
         int opcode;
     };
 
-    std::vector<int> code;
-    mutable std::vector<double> wrk;
-    std::vector<double *> variables;
-
     static std::map<std::string, Operator> operators;
     static int max_level;
+    static std::map<std::string, std::pair<int, int> > inlined;
 
     static std::map<std::string, std::pair<int, int> > functions;
     static std::vector<double (*)()> func0;
