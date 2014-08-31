@@ -2,8 +2,8 @@ expr
 ====
 Tiny library for run-time evaluation of expressions for C++.
 
-The code is just one include file (no .cpp, no dependencies) providing
-the class `Expr`.
+The code is just one include file and one cpp file (no dependencies
+besides standard C++ library) providing the class `Expr`.
 
 Usage
 -----
@@ -49,6 +49,15 @@ that requires a `const char *&` instead of a `const char *`. The
 character pointer will be on the first character not used for parsing
 the expression and not being on the terminating `NUL` is not
 considered an error.
+
+Functions
+---------
+Using `Expr::addFunction(name, f)` it's possible to add external
+functions of 0, 1 or 2 parameters. Predefined functions from
+`<math.h>` are: **fabs**, **sqrt**, **sin**, **cos**, **tan**,
+**atan**, **atan2**, **pow** and there is also **random** taking
+no parameters and returning a number between 0 and 1 implemented
+as `double(rand()) / RAND_MAX`.
 
 Syntax
 ------

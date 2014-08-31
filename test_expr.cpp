@@ -29,6 +29,14 @@ int main() {
         {"1<2 || 3>4", -1, 1.0},
         {"(0.1+0.1+0.1+0.1+0.1+0.1+0.1+0.1+0.1+0.1)!=1.0", -1, 1.0}, // Approximation!
 
+        {"abs(-1)", -1, 1.0},
+        {"cos(1-1)", -1, 1.0},
+        {"abs(cos(3.141592654 * 0.5)) < 1E-6", -1, 1.0},
+        {"cos()", 4, -1},
+        {"atan2(12)", 8, -1},
+        {"atan2(0, 1)", -1, 0},
+        {"abs(atan(1)-3.141592654/4) < 1E-6", -1, 1.0},
+
         {"1+z2*4", 4, -1},
         {"1+2*", 4, -1},
         {"1+(2*3", 6, -1},
@@ -71,12 +79,15 @@ int main() {
     double& y = vars["y"];
     double& x = vars["x"];
     std::vector<unsigned char> img(w*h);
-    Expr e("((x-320)*(x-320) + (y-240)*(y-240))*k", vars);
+    Expr e("((x-320)*(x-320) + (y-240)*(y-240))*k + random()*32-16", vars);
+    printf("Expression compiled code:\n%s\n", e.disassemble().c_str());
     clock_t start = clock();
     int i = 0;
     for (y=0; y<h; y++) {
         for (x=0; x<w; x++) {
-            img[i++] = e;
+            int ie = int(e);
+            if (ie < 0) ie = 0; if (ie > 255) ie = 255;
+            img[i++] = ie;
         }
     }
     clock_t stop = clock();
