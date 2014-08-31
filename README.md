@@ -61,7 +61,10 @@ Normal C syntax is used; implemented operators (in order of precedence) are:
     &&
     ||
 
-variables are parsed with `[a-zA-Z][a-zA-Z0-9_]*`
+variables are parsed with `[a-zA-Z][a-zA-Z0-9_]*`.
+
+Comments can be included: characters from `;` to the end of a line
+are ignored during parsing.
 
 Errors
 ------
