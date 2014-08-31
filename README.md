@@ -5,8 +5,9 @@ expr
 
 Tiny library for run-time evaluation of expressions for C++.
 
-The code is just one include file and one cpp file (no dependencies
-besides standard C++ library) providing the class `Expr`.
+The code is just one include file and one cpp file (about 400 lines
+in total, no dependencies besides standard C++ library) providing
+only one class `Expr`.
 
 Usage
 -----
