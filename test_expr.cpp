@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 #include "expr.h"
+
+double myrandom() {
+    return double(rand()) / RAND_MAX;
+}
 
 int main() {
     struct Test { const char *expr; int err; double result; } tests[] = {
@@ -110,6 +115,31 @@ int main() {
         fclose(f);
     } else {
         fprintf(stderr, "Error generating test.pgm\n");
+    }
+
+    clock_t start2 = clock();
+    i = 0;
+    double k = vars["k"];
+    for (y=0; y<h; y++) {
+        for (x=0; x<w; x++) {
+            int ie = int(
+                (int(128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127) ^
+                 int(255 * (int(floor(x/128)+floor(y/96)) & 1))) + myrandom()*32-16);
+            if (ie < 0) ie = 0; if (ie > 255) ie = 255;
+            img[i++] = ie;
+        }
+    }
+    clock_t stop2 = clock();
+    printf("Test image generated natively in %0.3fms (%.0f pixels/sec)\n",
+           (stop2 - start2)*1000.0/CLOCKS_PER_SEC,
+           double(w*h)*CLOCKS_PER_SEC/(stop2-start2+1));
+    f = fopen("test_native.pgm", "wb");
+    if (f) {
+        fprintf(f, "P5\n%i %i 255\n", w, h);
+        fwrite(&img[0], 1, w*h, f);
+        fclose(f);
+    } else {
+        fprintf(stderr, "Error generating test_native.pgm\n");
     }
 
     return errors != 0;
