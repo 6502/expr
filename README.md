@@ -100,5 +100,5 @@ virtual machine. In the expression used in test_expr image generation:
     ((128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127) ^
      (255 * ((floor(x/128)+floor(y/96)) & 1))) + random()*32-16
 
-the evaluation is 3-6 times slower than optimized C++ equivalent for
+the evaluation is about 3 times slower than optimized C++ equivalent for
 the same. Currently there are no optimizations of any kind implemented.
