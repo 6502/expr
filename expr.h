@@ -37,8 +37,9 @@ class Expr {
 
 public:
     struct Error : std::runtime_error {
-        Error(const std::string& msg)
-            : std::runtime_error(msg)
+        int position;
+        Error(const std::string& msg, int position = -1)
+            : std::runtime_error(msg), position(position)
         {}
     };
 
@@ -56,8 +57,9 @@ public:
     static Expr partialParse(const char *& s, std::map<std::string, double>& vars);
 
     static Expr parse(const char *s, std::map<std::string, double>& vars) {
+        const char *s0 = s;
         Expr expr = partialParse(s, vars);
-        if (*s) throw Error("Unexpected extra characters\n");
+        if (*s) throw Error("Unexpected extra characters\n", s - s0);
         return expr;
     }
 

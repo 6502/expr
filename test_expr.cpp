@@ -85,22 +85,20 @@ int main() {
     int errors = 0;
     int ntests = sizeof(tests)/sizeof(tests[0]);
     for (int i=0; i<ntests; i++) {
-        const char *s = tests[i].expr;
         double res = -1;
         try {
-            Expr expr = Expr::partialParse(s, vars);
-            if (*s) throw Expr::Error("Extra characters");
+            Expr expr = Expr::parse(tests[i].expr, vars);
             if (tests[i].err != -1) throw Expr::Error("Parsing should have failed");
             res = expr.eval();
             if (tests[i].result != res) throw Expr::Error("Unexpected result");
         } catch (Expr::Error& err) {
-            if (tests[i].err == s - tests[i].expr) {
+            if (tests[i].err == err.position) {
                 // Ok; parsing error position is correct
             } else {
                 errors++;
-                printf("TEST FAILED: \"%s\" (err=%i, result=%0.3f) --> res=%0.3f\n%s\n\n",
+                printf("TEST FAILED: \"%s\" (err=%i, result=%0.3f) --> res=%0.3f\n%s (position=%i)\n\n",
                        tests[i].expr, tests[i].err, tests[i].result,
-                       res, err.what());
+                       res, err.what(), err.position);
             }
         }
     }

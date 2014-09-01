@@ -83,15 +83,7 @@ Expr Expr::partialParse(const char *& s, std::map<std::string, double>& vars) {
         result.resreg = result.compile(regs, s, vars, -1)&~READONLY;
         skipsp(s);
     } catch (const Error& re) {
-        std::string msg(re.what());
-        msg += "\n";
-        msg += s0;
-        msg += "\n";
-        for (int i=0; i<s-s0; i++) {
-            msg += " ";
-        }
-        msg += "^ HERE\n";
-        throw Error(msg);
+        throw Error(re.what(), s - s0);
     }
     //printf("s0 = \"%s\":\n%s\n\n", s0, result.disassemble().c_str());
     return result;
