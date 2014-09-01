@@ -72,7 +72,6 @@ public:
         std::swap(resreg, other.resreg);
         code.swap(other.code);
         wrk.swap(other.wrk);
-        variables.swap(other.variables);
     }
 
     Expr(const char *s, std::map<std::string, double>& m) {
@@ -102,6 +101,23 @@ public:
     std::string disassemble() const;
 
 private:
+    struct Instruction {
+        int cc;
+        void *p;
+        Instruction(int opcode,
+                    int r1,
+                    int r2,
+                    int r3,
+                    void *p)
+        : cc(opcode|(r1<<8)|(r2<<16)|(r3<<24)), p(p)
+        {
+            if (r1 < 0 || r2 < 0 || r3 < 0 ||
+                r1 > 255 || r2 > 255 || r3 > 255) {
+                throw Error("Expression too complex\n");
+            }
+        }
+    };
+
     enum { MOVE, LOAD,
            NEG,
            ADD, SUB, MUL, DIV, LT, LE, GT, GE, EQ, NE, AND, OR,
@@ -110,9 +126,16 @@ private:
            FUNC0, FUNC1, FUNC2 };
 
     int resreg;
-    std::vector<int> code;
+    std::vector<Instruction> code;
     mutable std::vector<double> wrk;
-    std::vector<double *> variables;
+
+    void emit(int opcode,
+              int r1 = 0,
+              int r2 = 0,
+              int r3 = 0,
+              void *p = 0) {
+        code.push_back(Instruction(opcode, r1&~READONLY, r2&~READONLY, r3&~READONLY, p));
+    }
 
     struct Operator {
         const char *name;
@@ -133,6 +156,12 @@ private:
     friend class Init;
 
     enum { READONLY = 0x4000000 };
+
+    void freeReg(int r, std::vector<int>& regs) {
+        if (!(r & READONLY)) {
+            regs.push_back(r);
+        }
+    }
 
     int reg(std::vector<int>& regs) {
         if (regs.size() == 0) {

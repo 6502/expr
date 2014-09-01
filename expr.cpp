@@ -33,44 +33,45 @@ std::vector<double (*)(double,double)> Expr::func2;
 
 double Expr::eval() const {
     double *wp = &wrk[0];
-    const int *cp = &code[0], *ce = cp+code.size();
-    while (cp != ce) {
-        switch(cp[0]) {
-        case MOVE: wp[cp[1]] = wp[cp[2]]; cp+=3; break;
-        case LOAD: wp[cp[1]] = *variables[cp[2]]; cp+=3; break;
-        case NEG: wp[cp[1]] = -wp[cp[1]]; cp+=2; break;
-        case ADD: wp[cp[1]] += wp[cp[2]]; cp+=3; break;
-        case SUB: wp[cp[1]] -= wp[cp[2]]; cp+=3; break;
-        case MUL: wp[cp[1]] *= wp[cp[2]]; cp+=3; break;
-        case DIV: wp[cp[1]] /= wp[cp[2]]; cp+=3; break;
-        case LT:  wp[cp[1]] = (wp[cp[1]] <  wp[cp[2]]); cp+=3; break;
-        case LE:  wp[cp[1]] = (wp[cp[1]] <= wp[cp[2]]); cp+=3; break;
-        case GT:  wp[cp[1]] = (wp[cp[1]] >  wp[cp[2]]); cp+=3; break;
-        case GE:  wp[cp[1]] = (wp[cp[1]] >= wp[cp[2]]); cp+=3; break;
-        case EQ:  wp[cp[1]] = (wp[cp[1]] == wp[cp[2]]); cp+=3; break;
-        case NE:  wp[cp[1]] = (wp[cp[1]] != wp[cp[2]]); cp+=3; break;
-        case AND: wp[cp[1]] = (wp[cp[1]] && wp[cp[2]]); cp+=3; break;
-        case OR:  wp[cp[1]] = (wp[cp[1]] || wp[cp[2]]); cp+=3; break;
-        case B_OR: wp[cp[1]] = (int(wp[cp[1]]) | int(wp[cp[2]])); cp+=3; break;
-        case B_AND: wp[cp[1]] = (int(wp[cp[1]]) & int(wp[cp[2]])); cp+=3; break;
-        case B_XOR: wp[cp[1]] = (int(wp[cp[1]]) ^ int(wp[cp[2]])); cp+=3; break;
-        case B_SHL: wp[cp[1]] = (int(wp[cp[1]]) << int(wp[cp[2]])); cp+=3; break;
-        case B_SHR: wp[cp[1]] = (int(wp[cp[1]]) >> int(wp[cp[2]])); cp+=3; break;
-        case FFLOOR: wp[cp[1]] = floor(wp[cp[1]]); cp+=2; break;
-        case FABS: wp[cp[1]] = fabs(wp[cp[1]]); cp+=2; break;
-        case FSIN: wp[cp[1]] = sin(wp[cp[1]]); cp+=2; break;
-        case FCOS: wp[cp[1]] = cos(wp[cp[1]]); cp+=2; break;
-        case FSQRT: wp[cp[1]] = sqrt(wp[cp[1]]); cp+=2; break;
-        case FTAN: wp[cp[1]] = tan(wp[cp[1]]); cp+=2; break;
-        case FATAN: wp[cp[1]] = atan(wp[cp[1]]); cp+=2; break;
-        case FLOG: wp[cp[1]] = log(wp[cp[1]]); cp+=2; break;
-        case FEXP: wp[cp[1]] = exp(wp[cp[1]]); cp+=2; break;
-        case FATAN2: wp[cp[1]] = atan2(wp[cp[1]], wp[cp[2]]); cp+=3; break;
-        case FPOW: wp[cp[1]] = pow(wp[cp[1]], wp[cp[2]]); cp+=3; break;
-        case FUNC0: wp[cp[2]] = func0[cp[1]](); cp+=3; break;
-        case FUNC1: wp[cp[2]] = func1[cp[1]](wp[cp[2]]); cp+=3; break;
-        case FUNC2: wp[cp[2]] = func2[cp[1]](wp[cp[2]], wp[cp[3]]); cp+=4; break;
+    const Instruction *ip=&code[0], *end=ip+code.size();
+    while (ip != end) {
+        switch(ip->cc & 255) {
+        case MOVE: wp[(ip->cc >> 8) & 255] = wp[(ip->cc >> 16) & 255]; break;
+        case LOAD: wp[(ip->cc >> 8) & 255] = *((double *)ip->p); break;
+        case NEG: wp[(ip->cc >> 8) & 255] = -wp[(ip->cc >> 16) & 255]; break;
+        case ADD: wp[(ip->cc >> 8) & 255] = wp[(ip->cc >> 16) & 255] + wp[(ip->cc >> 24) & 255]; break;
+        case SUB: wp[(ip->cc >> 8) & 255] = wp[(ip->cc >> 16) & 255] - wp[(ip->cc >> 24) & 255]; break;
+        case MUL: wp[(ip->cc >> 8) & 255] = wp[(ip->cc >> 16) & 255] * wp[(ip->cc >> 24) & 255]; break;
+        case DIV: wp[(ip->cc >> 8) & 255] = wp[(ip->cc >> 16) & 255] / wp[(ip->cc >> 24) & 255]; break;
+        case LT:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] <  wp[(ip->cc >> 24) & 255]); break;
+        case LE:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] <= wp[(ip->cc >> 24) & 255]); break;
+        case GT:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] >  wp[(ip->cc >> 24) & 255]); break;
+        case GE:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] >= wp[(ip->cc >> 24) & 255]); break;
+        case EQ:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] == wp[(ip->cc >> 24) & 255]); break;
+        case NE:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] != wp[(ip->cc >> 24) & 255]); break;
+        case AND: wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] && wp[(ip->cc >> 24) & 255]); break;
+        case OR:  wp[(ip->cc >> 8) & 255] = (wp[(ip->cc >> 16) & 255] || wp[(ip->cc >> 24) & 255]); break;
+        case B_OR: wp[(ip->cc >> 8) & 255] = (int(wp[(ip->cc >> 16) & 255]) | int(wp[(ip->cc >> 24) & 255])); break;
+        case B_AND: wp[(ip->cc >> 8) & 255] = (int(wp[(ip->cc >> 16) & 255]) & int(wp[(ip->cc >> 24) & 255])); break;
+        case B_XOR: wp[(ip->cc >> 8) & 255] = (int(wp[(ip->cc >> 16) & 255]) ^ int(wp[(ip->cc >> 24) & 255])); break;
+        case B_SHL: wp[(ip->cc >> 8) & 255] = (int(wp[(ip->cc >> 16) & 255]) << int(wp[(ip->cc >> 24) & 255])); break;
+        case B_SHR: wp[(ip->cc >> 8) & 255] = (int(wp[(ip->cc >> 16) & 255]) >> int(wp[(ip->cc >> 24) & 255])); break;
+        case FFLOOR: wp[(ip->cc >> 8) & 255] = floor(wp[(ip->cc >> 16) & 255]); break;
+        case FABS: wp[(ip->cc >> 8) & 255] = fabs(wp[(ip->cc >> 16) & 255]); break;
+        case FSIN: wp[(ip->cc >> 8) & 255] = sin(wp[(ip->cc >> 16) & 255]); break;
+        case FCOS: wp[(ip->cc >> 8) & 255] = cos(wp[(ip->cc >> 16) & 255]); break;
+        case FSQRT: wp[(ip->cc >> 8) & 255] = sqrt(wp[(ip->cc >> 16) & 255]); break;
+        case FTAN: wp[(ip->cc >> 8) & 255] = tan(wp[(ip->cc >> 16) & 255]); break;
+        case FATAN: wp[(ip->cc >> 8) & 255] = atan(wp[(ip->cc >> 16) & 255]); break;
+        case FLOG: wp[(ip->cc >> 8) & 255] = log(wp[(ip->cc >> 16) & 255]); break;
+        case FEXP: wp[(ip->cc >> 8) & 255] = exp(wp[(ip->cc >> 16) & 255]); break;
+        case FATAN2: wp[(ip->cc >> 8) & 255] = atan2(wp[(ip->cc >> 16) & 255], wp[(ip->cc >> 24) & 255]); break;
+        case FPOW: wp[(ip->cc >> 8) & 255] = pow(wp[(ip->cc >> 16) & 255], wp[(ip->cc >> 24) & 255]); break;
+        case FUNC0: wp[(ip->cc >> 8) & 255] = ((double (*)())ip->p)(); break;
+        case FUNC1: wp[(ip->cc >> 8) & 255] = ((double (*)(double))ip->p)(wp[(ip->cc >> 16) & 255]); break;
+        case FUNC2: wp[(ip->cc >> 8) & 255] = ((double (*)(double, double))ip->p)(wp[(ip->cc >> 16) & 255], wp[(ip->cc >> 24) & 255]); break;
         }
+        ip++;
     }
     return wp[resreg];
 }
@@ -113,13 +114,10 @@ int Expr::compile(std::vector<int>& regs,
             }
         } else if (*s == '-') {
             s++;
-            int res = compile(regs, s, vars, 0);
-            if (res & READONLY) {
-                int r1 = reg(regs);
-                code.push_back(MOVE); code.push_back(r1); code.push_back(res&~READONLY);
-                res = r1;
-            }
-            code.push_back(NEG); code.push_back(res);
+            int x = compile(regs, s, vars, 0);
+            freeReg(x, regs);
+            int res = reg(regs);
+            emit(NEG, res, x);
             return res;
         } else if (*s && (*s == '_' || isalpha((unsigned char)*s))) {
             const char *s0 = s;
@@ -134,11 +132,11 @@ int Expr::compile(std::vector<int>& regs,
                     if (it == inlined.end()) throw Error(std::string("Unknown function '" + name + "'"));
                 }
                 s++;
-                std::vector<int> args;
+                int args[2] = {0};
                 int id = it->second.first;
                 int arity = it->second.second;
                 for (int a=0; a<arity; a++) {
-                    args.push_back(compile(regs, s, vars, -1));
+                    args[a] = compile(regs, s, vars, -1);
                     if (a != arity-1) {
                         skipsp(s);
                         if (*s != ',') throw Error("',' expected");
@@ -148,34 +146,24 @@ int Expr::compile(std::vector<int>& regs,
                 skipsp(s);
                 if (*s != ')') throw Error("')' expected");
                 s++;
-                int target = (arity == 0) ? reg(regs) : args[0];
-                if (target & READONLY) {
-                    int r1 = reg(regs);
-                    code.push_back(MOVE); code.push_back(r1); code.push_back(target&~READONLY);
-                    target = r1;
+                for (int i=0; i<arity; i++) {
+                    freeReg(args[i], regs);
                 }
+                int target = reg(regs);
                 if (ii) {
-                    code.push_back(id);
+                    emit(id, target, args[0], args[1]);
                 } else {
-                    code.push_back(FUNC0 + arity);
-                    code.push_back(id);
-                }
-                code.push_back(target);
-                for (int i=1; i<arity; i++) {
-                    code.push_back(args[i]&~READONLY);
-                    if (!(args[i] & READONLY)) {
-                        regs.push_back(args[i]);
-                    }
+                    emit(FUNC0 + arity, target, args[0], args[1],
+                         arity == 0 ? (void *)func0[id] :
+                         arity == 1 ? (void *)func1[id] :
+                         (void *)func2[id]);
                 }
                 return target;
             } else {
                 std::map<std::string, double>::iterator it = vars.find(name);
                 if (it != vars.end()) {
                     int target = reg(regs);
-                    variables.push_back(&it->second);
-                    code.push_back(LOAD);
-                    code.push_back(target);
-                    code.push_back(variables.size()-1);
+                    emit(LOAD, target, 0, 0, &it->second);
                     return target;
                 } else {
                     throw Error(std::string("Unknown variable '" + name + "'"));
@@ -192,17 +180,11 @@ int Expr::compile(std::vector<int>& regs,
         if (it == operators.end() || it->second.level != level) break;
         s += it->first.size();
         int x = compile(regs, s, vars, level-1);
-        if (res & READONLY) {
-            int r1 = reg(regs);
-            code.push_back(MOVE); code.push_back(r1); code.push_back(res&~READONLY);
-            res = r1;
-        }
-        code.push_back(it->second.opcode);
-        code.push_back(res);
-        code.push_back(x&~READONLY);
-        if (!(x&READONLY)) {
-            regs.push_back(x);
-        }
+        freeReg(x, regs);
+        freeReg(res, regs);
+        int nr = reg(regs);
+        emit(it->second.opcode, nr, res, x);
+        res = nr;
     }
     return res;
 }
@@ -219,17 +201,19 @@ std::string Expr::disassemble() const {
     char buf[30];
     const char *fn = "?";
     for (int i=0,n=code.size(); i<n; i++) {
+        int opcode = code[i].cc & 255;
+        int r1 = (code[i].cc >> 8) & 255;
+        int r2 = (code[i].cc >> 16) & 255;
+        int r3 = (code[i].cc >> 24) & 255;
         sprintf(buf, "%i: ", i);
         result += buf;
-        result += opnames[code[i]];
-        switch(code[i]) {
+        result += opnames[opcode];
+        switch(opcode) {
         case MOVE:
-            sprintf(buf, "(%i = %i) v=%0.3f\n", code[i+1], code[i+2], wrk[code[i+2]]);
-            i += 2;
+            sprintf(buf, "(%i = %i) v=%0.3f\n", r1, r2, wrk[r2]);
             break;
         case LOAD:
-            sprintf(buf, "(%i = %p)\n", code[i+1], variables[code[i+2]]);
-            i += 2;
+            sprintf(buf, "(%i = %p)\n", r1, code[i].p);
             break;
         case NEG:
         case FSIN:
@@ -241,13 +225,11 @@ std::string Expr::disassemble() const {
         case FATAN:
         case FLOG:
         case FEXP:
-            sprintf(buf, "(%i)\n", code[i+1]);
-            i += 1;
+            sprintf(buf, "(%i) -> %i\n", r2, r1);
             break;
         case FATAN2:
         case FPOW:
-            sprintf(buf, "(%i, %i) -> %i\n", code[i+1], code[i+2], code[i+1]);
-            i += 2;
+            sprintf(buf, "(%i, %i) -> %i\n", r2, r3, r1);
             break;
         case FUNC0:
         case FUNC1:
@@ -255,25 +237,27 @@ std::string Expr::disassemble() const {
             fn = "?";
             for (std::map<std::string, std::pair<int, int> >::iterator it=functions.begin();
                  it!=functions.end(); ++it) {
-                if (it->second.second == code[i]-FUNC0 && it->second.first == code[i+1]) {
+                if (it->second.second == opcode-FUNC0 &&
+                    (it->second.second == 0 ? (void *)func0[it->second.first] == code[i].p :
+                     it->second.second == 0 ? (void *)func1[it->second.first] == code[i].p :
+                     (void *)func2[it->second.first] == code[i].p)) {
                     fn=it->first.c_str();
                 }
             }
-            switch(code[i]) {
+            switch(opcode) {
             case FUNC0: sprintf(buf, " %p=%s() -> %i\n",
-                                func0[code[i+1]], fn, code[i+2]);
-                i+=2; break;
+                                code[i].p, fn, r1);
+                break;
             case FUNC1: sprintf(buf, " %p=%s(%i) -> %i\n",
-                                func1[code[i+1]], fn, code[i+2], code[i+2]);
-                i+=2; break;
+                                code[i].p, fn, r2, r1);
+                break;
             case FUNC2: sprintf(buf, " %p=%s(%i, %i) -> %i\n",
-                                func2[code[i+1]], fn, code[i+2], code[i+3], code[i+2]);
-                i+=3; break;
+                                code[i].p, fn, r2, r3, r1);
+                break;
             }
             break;
         default:
-            sprintf(buf, "(%i, %i) -> %i\n", code[i+1], code[i+2], code[i+1]);
-            i += 2;
+            sprintf(buf, "(%i, %i) -> %i\n", r2, r3, r1);
             break;
         }
         result += buf;
