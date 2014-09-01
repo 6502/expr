@@ -115,18 +115,20 @@ int main() {
            " (255 * ((floor(x/128)+floor(y/96)) & 1))) + random()*32-16", vars);
     printf("Expression compiled code:\n%s\n", e.disassemble().c_str());
     clock_t start = clock();
-    int i = 0;
-    for (y=0; y<h; y++) {
-        for (x=0; x<w; x++) {
-            int ie = int(e);
-            if (ie < 0) ie = 0; if (ie > 255) ie = 255;
-            img[i++] = ie;
+    for (int rep=0; rep<10; rep++) {
+        int i = 0;
+        for (y=0; y<h; y++) {
+            for (x=0; x<w; x++) {
+                int ie = int(e);
+                if (ie < 0) ie = 0; if (ie > 255) ie = 255;
+                img[i++] = ie;
+            }
         }
     }
     clock_t stop = clock();
     printf("Test image generated in %0.3fms (%.0f pixels/sec)\n",
-           (stop - start)*1000.0/CLOCKS_PER_SEC,
-           double(w*h)*CLOCKS_PER_SEC/(stop-start+1));
+           (stop - start)*100.0/CLOCKS_PER_SEC,
+           double(w*h*10)*CLOCKS_PER_SEC/(stop-start+1));
     FILE *f = fopen("test.pgm", "wb");
     if (f) {
         fprintf(f, "P5\n%i %i 255\n", w, h);
@@ -137,21 +139,23 @@ int main() {
     }
 
     clock_t start2 = clock();
-    i = 0;
     double k = vars["k"];
-    for (y=0; y<h; y++) {
-        for (x=0; x<w; x++) {
-            int ie = int(
-                (int(128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127) ^
-                 int(255 * (int(floor(x/128)+floor(y/96)) & 1))) + myrandom()*32-16);
-            if (ie < 0) ie = 0; if (ie > 255) ie = 255;
-            img[i++] = ie;
+    for (int rep=0; rep<10; rep++) {
+        int i = 0;
+        for (y=0; y<h; y++) {
+            for (x=0; x<w; x++) {
+                int ie = int(
+                    (int(128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127) ^
+                     int(255 * (int(floor(x/128)+floor(y/96)) & 1))) + myrandom()*32-16);
+                if (ie < 0) ie = 0; if (ie > 255) ie = 255;
+                img[i++] = ie;
+            }
         }
     }
     clock_t stop2 = clock();
     printf("Test image generated natively in %0.3fms (%.0f pixels/sec)\n",
-           (stop2 - start2)*1000.0/CLOCKS_PER_SEC,
-           double(w*h)*CLOCKS_PER_SEC/(stop2-start2+1));
+           (stop2 - start2)*100.0/CLOCKS_PER_SEC,
+           double(w*h*10)*CLOCKS_PER_SEC/(stop2-start2+1));
     f = fopen("test_native.pgm", "wb");
     if (f) {
         fprintf(f, "P5\n%i %i 255\n", w, h);
