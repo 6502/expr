@@ -109,8 +109,11 @@ int main() {
     double& y = vars["y"];
     double& x = vars["x"];
     std::vector<unsigned char> img(w*h);
-    Expr e("((128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127) ^"
-           " (255 * ((floor(x/128)+floor(y/96)) & 1))) + random()*32-16", vars);
+    Expr e1("((128 + sin(((x-320)*(x-320) + (y-240)*(y-240))*k)*127) ^"
+            " (255 * ((floor(x/128)+floor(y/96)) & 1))) + random()*32-16", vars);
+    Expr e;
+    e = e1;
+
     printf("Expression compiled code:\n%s\n", e.disassemble().c_str());
     clock_t start = clock();
     for (int rep=0; rep<10; rep++) {

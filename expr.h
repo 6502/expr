@@ -32,6 +32,7 @@ SOFTWARE.
 #include <algorithm>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 class Expr {
 
@@ -64,14 +65,23 @@ public:
     }
 
     Expr(double x = 0.0) {
-        resreg = 0;
-        wrk.push_back(x);
+        wrk.resize(1);
+        wrk[0] = x;
+        resreg = &wrk[0];
     }
+
+    Expr(const Expr& other);
 
     void swap(Expr& other) {
         std::swap(resreg, other.resreg);
         code.swap(other.code);
         wrk.swap(other.wrk);
+        constants.swap(other.constants);
+    }
+
+    Expr& operator=(const Expr& other) {
+        Expr(other).swap(*this);
+        return *this;
     }
 
     Expr(const char *s, std::map<std::string, double>& m) {
@@ -101,41 +111,42 @@ public:
     std::string disassemble() const;
 
 private:
-    struct Instruction {
-        int cc;
-        void *p;
-        Instruction(int opcode,
-                    int r1,
-                    int r2,
-                    int r3,
-                    void *p)
-        : cc(opcode|(r1<<8)|(r2<<16)|(r3<<24)), p(p)
-        {
-            if (r1 < 0 || r2 < 0 || r3 < 0 ||
-                r1 > 255 || r2 > 255 || r3 > 255) {
-                throw Error("Expression too complex\n");
-            }
-        }
+    union Instruction {
+        int i;
+        double *p;
+        double (*f0)();
+        double (*f1)(double);
+        double (*f2)(double, double);
+
+        Instruction(int i) : i(i) {}
+        Instruction(double *p) : p(p) {}
+        Instruction(double (*f0)()) : f0(f0) {}
+        Instruction(double (*f1)(double)) : f1(f1) {}
+        Instruction(double (*f2)(double, double)) : f2(f2) {}
     };
 
-    enum { MOVE, LOAD,
-           NEG,
+    double *resreg;
+    std::vector<Instruction> code;
+    std::vector<double> wrk;
+    std::vector<double> constants;
+
+    struct MoreRegs {};
+    struct MoreConstants {};
+
+    void freeReg(double *r, std::vector<double *>& regs);
+    double *reg(std::vector<double *>& regs);
+    double *compile(std::vector<double *>& regs,
+                    const char *& s, std::map<std::string, double>& vars, int level);
+
+    template<typename T> void emit(const T& x) {
+        code.push_back(x);
+    }
+
+    enum { NEG,
            ADD, SUB, MUL, DIV, LT, LE, GT, GE, EQ, NE, AND, OR,
            B_SHL, B_SHR, B_AND, B_OR, B_XOR,
            FSIN, FCOS, FFLOOR, FABS, FSQRT, FTAN, FATAN, FLOG, FEXP, FATAN2, FPOW,
            FUNC0, FUNC1, FUNC2 };
-
-    int resreg;
-    std::vector<Instruction> code;
-    mutable std::vector<double> wrk;
-
-    void emit(int opcode,
-              int r1 = 0,
-              int r2 = 0,
-              int r3 = 0,
-              void *p = 0) {
-        code.push_back(Instruction(opcode, r1&~READONLY, r2&~READONLY, r3&~READONLY, p));
-    }
 
     struct Operator {
         const char *name;
@@ -154,28 +165,6 @@ private:
 
     class Init;
     friend class Init;
-
-    enum { READONLY = 0x4000000 };
-
-    void freeReg(int r, std::vector<int>& regs) {
-        if (!(r & READONLY)) {
-            regs.push_back(r);
-        }
-    }
-
-    int reg(std::vector<int>& regs) {
-        if (regs.size() == 0) {
-            wrk.resize(1 + wrk.size());
-            regs.push_back(wrk.size()-1);
-        }
-        int r = regs.back();
-        regs.pop_back();
-        return r;
-    }
-
-    int compile(std::vector<int>& regs,
-                const char *& s, std::map<std::string, double>& vars, int level);
-
 };
 
 #endif
