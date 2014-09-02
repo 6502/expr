@@ -39,6 +39,7 @@ double Expr::eval() const {
         case MOVE: wp[cp[1]] = wp[cp[2]]; cp+=3; break;
         case LOAD: wp[cp[1]] = *variables[cp[2]]; cp+=3; break;
         case NEG: wp[cp[1]] = -wp[cp[1]]; cp+=2; break;
+        case NOT: wp[cp[1]] = !wp[cp[1]]; cp+=2; break;
         case ADD: wp[cp[1]] += wp[cp[2]]; cp+=3; break;
         case SUB: wp[cp[1]] -= wp[cp[2]]; cp+=3; break;
         case MUL: wp[cp[1]] *= wp[cp[2]]; cp+=3; break;
@@ -120,6 +121,16 @@ int Expr::compile(std::vector<int>& regs,
                 res = r1;
             }
             code.push_back(NEG); code.push_back(res);
+            return res;
+        } else if (*s == '!') {
+            s++;
+            int res = compile(regs, s, vars, 0);
+            if (res & READONLY) {
+                int r1 = reg(regs);
+                code.push_back(MOVE); code.push_back(r1); code.push_back(res&~READONLY);
+                res = r1;
+            }
+            code.push_back(NOT); code.push_back(res);
             return res;
         } else if (*s && (*s == '_' || isalpha((unsigned char)*s))) {
             const char *s0 = s;

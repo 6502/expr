@@ -103,7 +103,7 @@ public:
 
 private:
     enum { MOVE, LOAD,
-           NEG,
+           NEG, NOT,
            ADD, SUB, MUL, DIV, LT, LE, GT, GE, EQ, NE, AND, OR,
            B_SHL, B_SHR, B_AND, B_OR, B_XOR,
            FSIN, FCOS, FFLOOR, FABS, FSQRT, FTAN, FATAN, FLOG, FEXP, FATAN2, FPOW,
